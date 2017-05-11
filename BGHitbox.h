@@ -3,25 +3,67 @@
 
 #include <vector>
 #include <SFML/Graphics.hpp>
+#include "BGSegment.h"
+#include "BGPoint.h"
+#include "BGTriangle.h"
+#include "BGPolygon.h"
+
+enum WhatToDraw
+{
+	HITBOX_CONTENT = 1,
+	LINES = 2,
+	POINTS = 4,
+	CURRENT_POINT = 8,
+	NUMBERS = 16
+};
 
 
 class BGHitbox
 {
 private:
-	std::vector < std::pair < unsigned int, unsigned int > > m_points;
-	bool m_finished;
+
+	BGPolygon m_hitbox;
+
+	std::vector < sf::ConvexShape > m_linesToDraw;
+	unsigned char m_thicknessLines;
+	sf::Color m_linesColor;
+
+	std::vector < sf::CircleShape > m_pointsToDraw;
+	unsigned char m_pointRadius;
+	sf::Color m_pointsColor;
+
+	std::vector < sf::VertexArray > m_hitboxContent;
+	sf::Color m_hitboxContentColor;
+
+	sf::CircleShape m_currentPoint;
+	char m_indexCurrentPoint; //est √©gal √† -1 √† la cr√©ation d'une nouvelle hitbox
+	sf::Color m_currentPointColor;
+
+	sf::Font* m_font; //Un pointeur car on va passer par BGDataManager quand il sera fait
+	unsigned char m_fontSize;
+	sf::Color m_fontColor;
+	std::vector < sf::Text > m_pointsNumbers;
+
+	static const unsigned char addRadiusCurrentPoint;
+
+	//M√©thodes private car utilis√©es dans celles "publiques"
+	void addNewDrawablePoint(const BGPoint&, char = -1); //Si l'indice vaut -1, la rajoute √† la fin du vector
+	void addNewDrawableLine(const BGSegment&, char = -1); //Si l'indice vaut -1, la rajoute √† la fin du vector
+	void readaptHitboxContent();
+
+	//Pas besoin d'avoir des pointeurs pour les sf::Drawable pour r√©aliser une collection h√©t√©rog√®ne, on passe directement par la m√©thode draw()
 
 public:
 	BGHitbox();
-	void addPoint(unsigned int, unsigned int); //Ajouter un nouveau point ‡ partir de ses coordonnÈes x et y (si cela est possible)
-	void delPoint(short int = -1); //Par dÈfaut, cela supprimera le dernier point, sinon, utilise l'indice donnÈ en paramËtre (si c'est possible)
-	void insertPoint(unsigned char, unsigned int, unsigned int); //Pour insÈrer un point ‡ un indice donnÈ (si cela est possible)
+	~BGHitbox();
+	void addPoint(const BGPoint&); //Ajouter un nouveau point √† la hitbox (si cela est possible)
+	void delPoint(char = -1); //Par d√©faut, cela supprimera le dernier point, sinon, utilise l'indice donn√© en param√®tre (si c'est possible)
+	void insertPoint(const BGPoint&, char = -1); //Pour ins√©rer un point √† un indice donn√© (si cela est possible)
 	void autoFinish(); //Pour terminer la hitbox automatiquement (si cela est possible)
-	void movePoint(short int, unsigned int, unsigned int); //Change la position d'un indice ‡ partir de son indice et de sa potientielle nouvelle position
-	static bool areSegmentsSecants(unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int, unsigned int); //DÈtermine si deux segments sont sÈcants ‡ partir de 4 points (les 2 premiers formant le premier segment et les deux derniers le second)
-	sf::ConvexShape showHitboxContent(sf::Color& const = sf::Color(255, 255, 255)); //Renvoie un convex correspondant ‡ la zone de la hitbox
-	std::vector<sf::ConvexShape> showLines(unsigned char = 2, sf::Color& const = sf::Color(255, 0, 0)); //Renvoie un vector des lignes (ConvexShape) de la hitbox
-	std::vector<sf::CircleShape> showPoints(unsigned char = 3, sf::Color& const = sf::Color(0, 255, 0)); //Renvoie un vector des points (CircleShape) de la hitbox
-};
+	void movePoint(const BGPoint&, char = -1); //Change la position d'un point √† partir de son indice et de sa potientielle nouvelle position
 
+	void draw(char, sf::RenderWindow&);
+	char getCurrentPoint() const; //Renvoie l'indice du point "courant"
+
+};
 #endif

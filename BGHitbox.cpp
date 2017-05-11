@@ -1,388 +1,304 @@
 #include "BGHitbox.h"
 #include <vector>
+#include <string>
 #include <iostream>
 #include <SFML/Graphics.hpp>
 
-/*  https://openclassrooms.com/forum/sujet/algorithme-2-segments-secant-ou-non
-	https://fr.wikipedia.org/wiki/D%C3%A9terminant_(math%C3%A9matiques)#D.C3.A9terminant_de_deux_vecteurs_dans_le_plan_euclidien
-	det(AB,AC)*det(AB,AD)<0 et det(CD,CA)*det(CD,CB)<0 si AB et CD sont sÈcants*/
-bool BGHitbox::areSegmentsSecants(unsigned int _xa, unsigned int _ya, unsigned int _xb, unsigned int _yb, unsigned int _xc, unsigned int _yc, unsigned int _xd, unsigned int _yd) //Notice the xd :eyes:
+const unsigned char BGHitbox::addRadiusCurrentPoint = 2;
+
+
+void BGHitbox::addNewDrawablePoint(const BGPoint& _point, char _index)
 {
-	//On va utiliser ces valeurs ‡ plusieurs reprises, pourquoi ne pas les stocker ? :sunglasses:
-	int xAB = _xb - _xa;
-	int xAC = _xc - _xa;
-	int xAD = _xd - _xa; //:eyes:
-	int xCA = _xa - _xc;
-	int xCB = _xb - _xc;
-	int xCD = _xd - _xc; //:eyes:
+	sf::CircleShape newPoint(m_pointRadius);
+	newPoint.setFillColor(m_pointsColor);
+	newPoint.setPosition(_point.x() - m_pointRadius, _point.y() - m_pointRadius);
 
-	int yAB = _yb - _ya;
-	int yAC = _yc - _ya;
-	int yAD = _yd - _ya;
-	int yCA = _ya - _yc;
-	int yCB = _yb - _yc;
-	int yCD = _yd - _yc;
+	if (_index == -1)
+	{
+		m_pointsToDraw.push_back(newPoint);
+	}
+	else
+	{
+		m_pointsToDraw.insert(m_pointsToDraw.begin() + _index, newPoint);
+	}
+}
 
-	long int detABAC = xAB * yAC - yAB * xAC;
-	long int detABAD = xAB * yAD - yAB * xAD;
-	long int detCDCA = xCD * yCA - yCD * xCA;
-	long int detCDCB = xCD * yCB - yCD * xCB;
+void BGHitbox::addNewDrawableLine(const BGSegment& _segment, char _index)
+{
+	sf::ConvexShape convex(4);
+	convex.setOutlineThickness(m_thicknessLines);
+	convex.setOutlineColor(m_linesColor);
 
-	return detABAC * detABAD < 0 && detCDCA * detCDCB < 0;
+	convex.setPoint(0, sf::Vector2f(_segment.P1().x(), _segment.P1().y()));
+	convex.setPoint(1, sf::Vector2f(_segment.P2().x(), _segment.P2().y()));
+	convex.setPoint(2, sf::Vector2f(_segment.P2().x(), _segment.P2().y()));
+	convex.setPoint(3, sf::Vector2f(_segment.P1().x(), _segment.P1().y()));
+	if (_index == -1)
+	{
+		m_linesToDraw.push_back(convex);
+	}
+	else
+	{
+		m_linesToDraw.insert(m_linesToDraw.begin() + _index, convex);
+	}
+}
+
+void BGHitbox::readaptHitboxContent()
+{
+	std::vector < BGTriangle > triangles = m_hitbox.triangulate();
+	m_hitboxContent.clear();
+	for (unsigned char i = 0; i < triangles.size(); i++)
+	{
+  		sf::VertexArray tempTriangle(sf::Triangles, 3);
+  		tempTriangle[0].position = sf::Vector2f(triangles[i].P1().x(), triangles[i].P1().y());
+  		tempTriangle[1].position = sf::Vector2f(triangles[i].P2().x(), triangles[i].P2().y());
+  		tempTriangle[2].position = sf::Vector2f(triangles[i].P3().x(), triangles[i].P3().y());
+  		m_hitboxContent.push_back(tempTriangle);
+	}
 }
 
 BGHitbox::BGHitbox()
 {
-	m_finished = false;
+	BGPolygon m_hitbox();
+
+	m_thicknessLines = 3;
+	m_linesColor = sf::Color(255, 0, 0);
+
+	m_pointRadius = 4;
+	m_pointsColor = sf::Color(0, 255, 0);
+
+	m_indexCurrentPoint = -1;
+	m_currentPointColor = sf::Color(0, 0, 255);
+	m_currentPoint = sf::CircleShape(m_pointRadius + BGHitbox::addRadiusCurrentPoint);
+	m_currentPoint.setFillColor(m_currentPointColor);
+
+	m_hitboxContentColor = sf::Color(255, 255, 255);
+
+	m_font = new sf::Font();
+	if(!m_font->loadFromFile("arial.ttf"))//Passer par BGDataManager par la suite
+	{
+		std::cout << "Unable to open the font!" << std::endl;
+	}
+	m_fontSize = 14;
+	m_fontColor = sf::Color(0, 0, 255);
 }
 
-void BGHitbox::addPoint(unsigned int _x, unsigned int _y)
+BGHitbox::~BGHitbox()
 {
-	if (!m_finished)
-	{
-		if (m_points.size() < 3) //Dans le cas o˘ il y a moins de 3 points, le nouveau segment potientiellement crÈÈ avec le point ne pourra pas Ítre sÈcant avec les autres
-		{
-			bool found = false;
-			unsigned char i = 0;
-			while (i < m_points.size() && !found) //En revanche, on doit s'assurer qu'il n'est pas confondu avec ceux dÈj‡ crÈÈs
-			{
-				if (m_points[i].first == _x && m_points[i].second == _y)
-				{
-					found = true;
-				}
-				i++;
-			}
-			if (!found)
-			{
-				m_points.push_back(std::make_pair(_x, _y));
-				std::cout << "Point ajoutÈ !" << std::endl;
-			}
-			else
-			{
-				std::cout << "Ajout du point impossible ! (vous ne pouvez pas ajouter un point qui existe dÈj‡ si la hitbox est constituÈe de moins de 4 points !) :(" << std::endl;
-			}
-		}
-		else
-		{
-			bool secant = false;
-			unsigned char i = 0;
-			while (i < m_points.size() - 2 && !secant) //Le nouveau segment potentiellement crÈÈ ne pourra dans tous les cas pas Ítre sÈcant avec le segment formÈ par les deux derniers points, d'o˘ le m_points.size() - 2
-			{
-				secant = BGHitbox::areSegmentsSecants(_x, _y, m_points[m_points.size() - 1].first, m_points[m_points.size() - 1].second, m_points[i].first, m_points[i].second, m_points[i + 1].first, m_points[i + 1].second);
-				i++;
-			}
-			if (!secant) //Il ne reste plus qu'‡ regarder si le point n'existe pas dÈj‡ (sachant que s'il est Ègal au premier point, alors cela signifie qu'il "fermera" la hitbox)
-			{
-				bool found = false;
-				unsigned char i = 1;
-				while (i < m_points.size() && !found)
-				{
-					if (m_points[i].first == _x && m_points[i].second == _y)
-					{
-						found = true;
-					}
-					i++;
-				}
-				if (!found)
-				{
-					if (_x == m_points[0].first && _y == m_points[0].second)
-					{
-						m_finished = true;
-						std::cout << "Hitbox terminÈe !" << std::endl;
-					}
-					else
-					{
-						m_points.push_back(std::make_pair(_x, _y));
-						std::cout << "Point ajoutÈ !" << std::endl;
-					}
-				}
-				else
-				{
-					std::cout << "Impossible d'ajouter un point dÈj‡ existant !" << std::endl;
-				}
-			}
-			else
-			{
-				std::cout << "Impossible d'ajouter le point : Segments sÈcants !" << std::endl;
-			}
-		}
-	}
-	else
-	{
-		std::cout << "Impossible de rajouter un point alors que la hitbox est terminÈe. Si vous souhaitez le faire, supprimez d'abord le dernier point !" << std::endl;
-	}
+	delete m_font; //Un probl√®me si jamais la police n'a pas r√©ussi √† √™tre charg√©e ? :thinking:
 }
 
-void BGHitbox::delPoint(short int _index)
+char BGHitbox::getCurrentPoint() const
 {
-	if (_index >= -1 && _index <= (unsigned char)(m_points.size() - 1))
-	{
-		if (m_finished && (_index == -1 || _index == m_points.size() - 1))
-		{
-			m_finished = false; //Dans le cas o˘ la hitbox est "finie", supprimer le dernier point revient ‡ considÈrer la hitbox comme non "fermÈe"
-			std::cout << "Hitbox plus 'terminÈe'" << std::endl;
-		}
-		else if (m_points.size() < 5) //Dans le cas o˘ la hitbox a moins de 5 points, la supression de l'un d'eux ne pose aucun problËme d'intersection avec le nouveau segment
-		{
-			m_points.erase(m_points.begin() + _index);
-			std::cout << "Point supprimÈ !" << std::endl;
-		}
-		else
-		{
-			if (_index == -1)
-			{
-				_index = m_points.size() - 1;
-			}
-			//SchÈma pour comprendre les explications suivantes : http://i.imgur.com/kFT3MGb.png
-
-			//On doit maintenant vÈrifier que la suppression de ce point n'entraÓne pas de problËmes (segments sÈcants avec ce le nouveau segment crÈÈ <-- le rouge)
-			bool secant = false;
-			unsigned char i = 0;
-			unsigned int x1, y1, x2, y2; //Les coordonnÈes des points du segment (le rouge) nouveau potientiellement crÈÈ par la pptientelle supression du point
-
-			if (_index == 0)
-			{
-				x1 = m_points[m_points.size() - 1].first;
-				y1 = m_points[m_points.size() - 1].second;
-			}
-			else
-			{
-				x1 = m_points[_index - 1].first;
-				y1 = m_points[_index - 1].second;
-			}
-
-			if (_index == m_points.size() - 1)
-			{
-				x2 = m_points[0].first;
-				y2 = m_points[0].second;
-			}
-			else
-			{
-				x2 = m_points[_index + 1].first;
-				y2 = m_points[_index + 1].second;
-			}
-
-			while (i < _index - 2 && !secant) //Dans tous les cas, cela ne sert ‡ rien de tester si les segments adjacents ‡ celui qui va Ítre potentiellement crÈÈ sont sÈcants avec lui (les segments bleus ne pourront jamais Ítre sÈcants avec le segment rouge)
-			{
-				secant = BGHitbox::areSegmentsSecants(x1, y1, x2, y2, m_points[i].first, m_points[i].second, m_points[i + 1].first, m_points[i + 1].second);
-				i++;
-			}
-			if (!secant)
-			{
-				i = _index + 2;
-				while (i < m_points.size() - 2 && !secant)
-				{
-					secant = BGHitbox::areSegmentsSecants(x1, y1, x2, y2, m_points[i].first, m_points[i].second, m_points[i + 1].first, m_points[i + 1].second);
-i++;
-				}
-				if (!secant)
-				{
-					m_points.erase(m_points.begin() + _index);
-					std::cout << "Point supprimÈ !" << std::endl;
-				}
-				else
-				{
-					std::cout << "Impossible de supprimer ce point : segments sÈcants !" << std::endl;
-				}
-			}
-			else
-			{
-				std::cout << "Impossible de supprimer ce point : segments sÈcants !" << std::endl;
-			}
-		}
-	}
-	else
-	{
-		std::cout << "Indice incorrect..." << std::endl;
-	}
+	return m_indexCurrentPoint;
 }
 
 void BGHitbox::autoFinish()
 {
-	if (!m_finished)
+	if (m_hitbox.autoFinish())
 	{
-		unsigned char i = 1;
-		bool secant = false;
-		while (i < m_points.size() - 2 && !secant) //Les deux segments adjacents au potentiel segment reliant le "dÈbut et la fin" ne peuvent pas Ítre sÈcants ‡ lui
-		{
-			secant = BGHitbox::areSegmentsSecants(m_points[m_points.size() - 1].first, m_points[m_points.size() - 1].second, m_points[0].first, m_points[0].second, m_points[i].first, m_points[i].second, m_points[i + 1].first, m_points[i + 1].second);
-			i++;
-		}
-		if (!secant)
-		{
-			m_finished = true;
-			std::cout << "Hitbox 'terminÈe' !" << std::endl;
-		}
-		else
-		{
-			std::cout << "Impossible : segments sÈcants !" << std::endl;
-		}
-	}
-	else
-	{
-		std::cout << "La hitbox est dÈj‡ terminÈe !" << std::endl;
+		addNewDrawableLine(BGSegment(m_hitbox.getPoint(0), m_hitbox.getPoint(m_hitbox.size() - 1)));
+		m_indexCurrentPoint = 0;
+		m_currentPoint.setPosition(m_hitbox.getPoint(m_indexCurrentPoint).x() - (m_pointRadius + BGHitbox::addRadiusCurrentPoint), m_hitbox.getPoint(m_indexCurrentPoint).y() - (m_pointRadius + BGHitbox::addRadiusCurrentPoint));
+		readaptHitboxContent();
 	}
 }
 
-void BGHitbox::insertPoint(unsigned char _index, unsigned int _x, unsigned int _y)
+void BGHitbox::addPoint(const BGPoint& _point)
 {
-	if (_index >= -1 && _index <= (unsigned char)(m_points.size() - 1))
+	if(m_hitbox.addPoint(_point)) //Si l'ajout du point a bien √©t√© r√©alis√©
 	{
-		//Voir schÈma
-		unsigned char i = 0;
-		bool secant = false;
-		while (i < _index - 1 && !secant)
+		if (m_hitbox.isFinished()) //Si la hitbox est maintenant termin√©e
 		{
-			secant = BGHitbox::areSegmentsSecants(_x, _y, m_points[_index].first, m_points[_index].second, m_points[i].first, m_points[i].second, m_points[i + 1].first, m_points[i + 1].second);
-			if (!secant && i != _index - 2)
-			{
-				secant = BGHitbox::areSegmentsSecants(_x, _y, m_points[_index - 1].first, m_points[_index - 1].second, m_points[i].first, m_points[i].second, m_points[i + 1].first, m_points[i + 1].second);
-			}
-			i++;
+			addNewDrawableLine(BGSegment(m_hitbox.getPoint(0), m_hitbox.getPoint(m_hitbox.size() - 2)));
+			m_indexCurrentPoint = 0;
+			m_currentPoint.setPosition(m_hitbox.getPoint(m_indexCurrentPoint).x() - (m_pointRadius + BGHitbox::addRadiusCurrentPoint), m_hitbox.getPoint(m_indexCurrentPoint).y() - (m_pointRadius + BGHitbox::addRadiusCurrentPoint));
 		}
-		if (!secant)
+		else
 		{
-			i = _index;
-			while (i < m_points.size() - 1 && !secant)
+			addNewDrawablePoint(_point);
+			m_indexCurrentPoint = m_hitbox.size() - 1;
+			m_currentPoint.setPosition(m_hitbox.getPoint(m_indexCurrentPoint).x() - (m_pointRadius + BGHitbox::addRadiusCurrentPoint), m_hitbox.getPoint(m_indexCurrentPoint).y() - (m_pointRadius + BGHitbox::addRadiusCurrentPoint));
+			sf::Text newNumber;
+			newNumber.setFont(*m_font);
+			newNumber.setString("lol");
+			newNumber.setCharacterSize(m_fontSize);
+			newNumber.setFillColor(m_fontColor);
+			newNumber.setPosition(sf::Vector2f(100, 100));
+			m_pointsNumbers.push_back(newNumber);
+			if (m_hitbox.size() > 1)
 			{
-				secant = BGHitbox::areSegmentsSecants(_x, _y, m_points[_index - 1].first, m_points[_index - 1].second, m_points[i].first, m_points[i].second, m_points[i + 1].first, m_points[i + 1].second);
-				if (!secant && i != _index)
+				addNewDrawableLine(BGSegment(_point, m_hitbox.getPoint(m_hitbox.size() - 2)));
+				if (m_hitbox.size() >= 3)
 				{
-					secant = BGHitbox::areSegmentsSecants(_x, _y, m_points[_index].first, m_points[_index].second, m_points[i].first, m_points[i].second, m_points[i + 1].first, m_points[i + 1].second);
+					readaptHitboxContent();
 				}
-				i++;
 			}
-			if (!secant)
+		}
+	}
+}
+
+void BGHitbox::delPoint(char _index)
+{
+	bool wasFinished = m_hitbox.isFinished();
+	if (m_hitbox.delPoint(_index))
+	{
+		if (m_hitbox.isFinished() != wasFinished) //Dans le cas o√π l'on a simplement arr√™t√© la fin de la hitbox
+		{
+			m_linesToDraw.erase(m_linesToDraw.end() - 1);
+		}
+		else
+		{
+			m_linesToDraw.erase(m_linesToDraw.begin() + _index - 1);
+			m_linesToDraw.erase(m_linesToDraw.begin() + _index - 1);
+			m_pointsToDraw.erase(m_pointsToDraw.begin() + _index);
+			addNewDrawableLine(BGSegment(m_hitbox.getPoint(_index - 1), m_hitbox.getPoint(_index)));
+			readaptHitboxContent();
+		}
+	}
+}
+
+void BGHitbox::insertPoint(const BGPoint& _point, char _index)
+{
+	if (m_hitbox.insertPoint(_point, _index))
+	{
+		addNewDrawablePoint(_point, _index);
+		unsigned char tempIndex;
+		if (_index == -1)
+		{
+			addNewDrawableLine(BGSegment(_point, m_hitbox.getPoint(m_hitbox.size() - 2)));
+		}
+		else if (_index == 0)
+		{
+			addNewDrawableLine(BGSegment(_point, m_hitbox.getPoint(1)));
+		}
+		else
+		{
+			if (_index == 0)
 			{
-				m_points.insert(m_points.begin() + _index, std::make_pair(_x, _y));
-				std::cout << "Point insÈrÈ !" << std::endl;
+				tempIndex = m_hitbox.size() - 1;
+			}
+			else if (_index == m_hitbox.size() - 1)
+			{
+				tempIndex = _index - 2;
 			}
 			else
 			{
-				std::cout << "Impossible : segments sÈcants !" << std::endl;
+				tempIndex = _index - 1;
 			}
-		}
-		else
-		{
-			std::cout << "Impossible : segments sÈcants !" << std::endl;
-		}
-	}
-	else
-	{
-		std::cout << "Indice incorrect..." << std::endl;
-	}
-}
-
-
-void BGHitbox::movePoint(short int _index, unsigned int _x, unsigned int _y)
-{
-	if (_index >= -1 && _index <= (unsigned char)(m_points.size() - 1))
-	{
-		unsigned char i = 0;
-		bool secant = false;
-
-		while (i < _index - 1 && !secant) //Le potientiel nouveau segment ne pourra pas Ítre sÈcant aux segments adjacents ‡ lui
-		{
-			secant = BGHitbox::areSegmentsSecants(_x, _y, m_points[_index + 1].first, m_points[_index + 1].second, m_points[i].first, m_points[i].second, m_points[i + 1].first, m_points[i + 1].second);
-			if (!secant && i != _index - 2)
+			m_linesToDraw.erase(m_linesToDraw.begin() + tempIndex);
+			addNewDrawableLine(BGSegment(_point, m_hitbox.getPoint(tempIndex)), tempIndex);
+			if (_index == m_hitbox.size() - 1)
 			{
-				secant = BGHitbox::areSegmentsSecants(_x, _y, m_points[_index - 1].first, m_points[_index - 1].second, m_points[i].first, m_points[i].second, m_points[i + 1].first, m_points[i + 1].second);
-			}
-			i++;
-		}
-		if (!secant)
-		{
-			i = _index + 1;
-			while (i < m_points.size() - 1 && !secant)
-			{
-				secant = BGHitbox::areSegmentsSecants(_x, _y, m_points[_index - 1].first, m_points[_index - 1].second, m_points[i].first, m_points[i].second, m_points[i + 1].first, m_points[i + 1].second);
-				if (!secant && i != _index + 1)
-				{
-					secant = BGHitbox::areSegmentsSecants(_x, _y, m_points[_index + 1].first, m_points[_index + 1].second, m_points[i].first, m_points[i].second, m_points[i + 1].first, m_points[i + 1].second);
-				}
-				i++;
-			}
-			if (!secant)
-			{
-				m_points[_index].first = _x;
-				m_points[_index].second = _y;
-				std::cout << "Point dÈplacÈ !" << std::endl;
+				tempIndex = 0;
 			}
 			else
 			{
-				std::cout << "Impossible : segments sÈcants !" << std::endl;
+				tempIndex = _index + 1;
 			}
+			addNewDrawableLine(BGSegment(_point, m_hitbox.getPoint(tempIndex)), _index);
+		}
+		if (_index == -1) m_indexCurrentPoint = m_hitbox.size() - 1;
+		else m_indexCurrentPoint = _index;
+		m_currentPoint.setPosition(m_hitbox.getPoint(m_indexCurrentPoint).x() - (m_pointRadius + BGHitbox::addRadiusCurrentPoint), m_hitbox.getPoint(m_indexCurrentPoint).y() - (m_pointRadius + BGHitbox::addRadiusCurrentPoint));
+		readaptHitboxContent();
+	}
+}
+
+void BGHitbox::movePoint(const BGPoint& _point, char _index)
+{
+	if (m_hitbox.movePoint(_point, _index))
+	{
+		if (_index == -1) _index = m_hitbox.size() - 1;
+		if (m_hitbox.size() >= 3)
+		{
+			if (_index == 0)
+			{
+				m_linesToDraw[0].setPoint(0, sf::Vector2f(_point.x(), _point.y()));
+				m_linesToDraw[0].setPoint(1, sf::Vector2f(m_hitbox.getPoint(1).x(), m_hitbox.getPoint(1).y()));
+				m_linesToDraw[0].setPoint(2, sf::Vector2f(m_hitbox.getPoint(1).x(), m_hitbox.getPoint(1).y()));
+				m_linesToDraw[0].setPoint(3, sf::Vector2f(_point.x(), _point.y()));
+			}
+			else if (_index == m_hitbox.size() - 1)
+			{
+				m_linesToDraw[m_linesToDraw.size() - 1].setPoint(0, sf::Vector2f(_point.x(), _point.y()));
+				m_linesToDraw[m_linesToDraw.size() - 1].setPoint(1, sf::Vector2f(m_hitbox.getPoint(_index - 1).x(), m_hitbox.getPoint(_index - 1).y()));
+				m_linesToDraw[m_linesToDraw.size() - 1].setPoint(2, sf::Vector2f(m_hitbox.getPoint(_index - 1).x(), m_hitbox.getPoint(_index - 1).y()));
+				m_linesToDraw[m_linesToDraw.size() - 1].setPoint(3, sf::Vector2f(_point.x(), _point.y()));
+			}
+			else
+			{
+				m_linesToDraw[_index - 1].setPoint(0, sf::Vector2f(_point.x(), _point.y()));
+				m_linesToDraw[_index - 1].setPoint(1, sf::Vector2f(m_hitbox.getPoint(_index - 1).x(), m_hitbox.getPoint(_index - 1).y()));
+				m_linesToDraw[_index - 1].setPoint(2, sf::Vector2f(m_hitbox.getPoint(_index - 1).x(), m_hitbox.getPoint(_index - 1).y()));
+				m_linesToDraw[_index - 1].setPoint(3, sf::Vector2f(_point.x(), _point.y()));
+
+				m_linesToDraw[_index].setPoint(0, sf::Vector2f(_point.x(), _point.y()));
+				m_linesToDraw[_index].setPoint(1, sf::Vector2f(m_hitbox.getPoint(_index + 1).x(), m_hitbox.getPoint(_index + 1).y()));
+				m_linesToDraw[_index].setPoint(2, sf::Vector2f(m_hitbox.getPoint(_index + 1).x(), m_hitbox.getPoint(_index + 1).y()));
+				m_linesToDraw[_index].setPoint(3, sf::Vector2f(_point.x(), _point.y()));
+
+			}
+			m_pointsToDraw[_index].setPosition(sf::Vector2f(_point.x() - m_pointRadius, _point.y() - m_pointRadius));
+
+			m_indexCurrentPoint = _index;
+			m_currentPoint.setPosition(m_hitbox.getPoint(m_indexCurrentPoint).x() - (m_pointRadius + BGHitbox::addRadiusCurrentPoint), m_hitbox.getPoint(m_indexCurrentPoint).y() - (m_pointRadius + BGHitbox::addRadiusCurrentPoint));
+
+			readaptHitboxContent();
 		}
 		else
 		{
-			std::cout << "Impossible : segments sÈcants !" << std::endl;
+			unsigned char i = _index == 0;
+			m_linesToDraw[0].setPoint(0, sf::Vector2f(_point.x(), _point.y()));
+			m_linesToDraw[0].setPoint(1, sf::Vector2f(m_hitbox.getPoint(i).x(), m_hitbox.getPoint(i).y()));
+			m_linesToDraw[0].setPoint(2, sf::Vector2f(m_hitbox.getPoint(i).x(), m_hitbox.getPoint(i).y()));
+			m_linesToDraw[0].setPoint(3, sf::Vector2f(_point.x(), _point.y()));
 		}
 	}
-	else
-	{
-		std::cout << "Indice incorrect..." << std::endl;
-	}
 }
 
 
-sf::ConvexShape BGHitbox::showHitboxContent(sf::Color& const _color)
+
+void BGHitbox::draw(char _objectsToDraw, sf::RenderWindow& _window)
 {
-	sf::ConvexShape convex;
 
-	convex.setPointCount(m_points.size());
-
-	for (unsigned char i = 0; i < m_points.size(); i++)
+	if ((_objectsToDraw & 0x1) == 1) //Hitbox content
 	{
-		convex.setPoint(i, sf::Vector2f(m_points[i].first, m_points[i].second));
+		for (unsigned char i = 0; i < m_hitboxContent.size(); i++)
+		{
+			_window.draw(m_hitboxContent[i]);
+		}
 	}
 
-	convex.setFillColor(_color);
-
-	return convex;
-}
-
-std::vector<sf::ConvexShape> BGHitbox::showLines(unsigned char _thickness, sf::Color& const _color)
-{
-	std::vector<sf::ConvexShape> lines;
-	for (unsigned char i = 0; i < m_points.size() - 1; i++)
+	if ((_objectsToDraw & 0x2) == 2) //Lines
 	{
-		sf::ConvexShape convex(4);
-		convex.setOutlineThickness(_thickness);
-		convex.setOutlineColor(_color);
-		convex.setPoint(0, sf::Vector2f(m_points[i].first, m_points[i].second));
-		convex.setPoint(1, sf::Vector2f(m_points[i + 1].first, m_points[i + 1].second));
-		convex.setPoint(2, sf::Vector2f(m_points[i + 1].first, m_points[i + 1].second));
-		convex.setPoint(3, sf::Vector2f(m_points[i].first, m_points[i].second));
-		lines.push_back(convex);
+		for (unsigned char i = 0; i < m_linesToDraw.size(); i++)
+		{
+			_window.draw(m_linesToDraw[i]);
+		}
 	}
 
-	if (m_finished)
+	if ((_objectsToDraw & 0x4) == 4) //Points
 	{
-		sf::ConvexShape convex(4);
-		convex.setOutlineThickness(_thickness);
-		convex.setOutlineColor(_color);
-		convex.setPoint(0, sf::Vector2f(m_points[m_points.size() - 1].first, m_points[m_points.size() - 1].second));
-		convex.setPoint(1, sf::Vector2f(m_points[0].first, m_points[0].second));
-		convex.setPoint(2, sf::Vector2f(m_points[0].first, m_points[0].second));
-		convex.setPoint(3, sf::Vector2f(m_points[m_points.size() - 1].first, m_points[m_points.size() - 1].second));
-		lines.push_back(convex);
+		for (unsigned char i = 0; i < m_pointsToDraw.size(); i++)
+		{
+			_window.draw(m_pointsToDraw[i]);
+		}
 	}
 
-	return lines;
-}
-
-
-std::vector<sf::CircleShape> BGHitbox::showPoints(unsigned char _size, sf::Color& const _color)
-{
-	std::vector<sf::CircleShape> points;
-
-	for (unsigned char i = 0; i < m_points.size(); i++)
+	if ((_objectsToDraw & 0x8) == 8) //Current point
 	{
-		sf::CircleShape point(_size);
-		point.setFillColor(_color);
-		point.setPosition(m_points[i].first - _size, m_points[i].second - _size); //Car _size correspond au rayon, autrement, cela aurait ÈtÈ _size / 2
-		points.push_back(point);
+		if (m_indexCurrentPoint != -1)
+		{
+			_window.draw(m_currentPoint);
+		}
 	}
 
-	return points;
+	if ((_objectsToDraw & 0x10) == 16) //Numbers
+	{
+		for (unsigned char i = 0; i < m_pointsNumbers.size(); i++)
+		{
+			_window.draw(m_pointsNumbers[i]);
+		}
+	}
 }
