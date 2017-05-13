@@ -12,6 +12,10 @@ BGSegment::BGSegment(BGPoint _p1, BGPoint _p2)
     m_p2 = _p2;
 }
 
+BGSegment::BGSegment(unsigned int _x1, unsigned int _y1, unsigned int _x2, unsigned int _y2) : m_p1(BGPoint(_x1, _y1)), m_p2(BGPoint(_x2, _y2))
+{
+}
+
 BGPoint BGSegment::P1() const
 {
     return m_p1;
@@ -139,4 +143,14 @@ BGPoint BGSegment::operator[] (char _index) const
             std::cout << "Erreur : Index non compris entre 0 et 1 inclus !" << std::endl;
             break;
     }
+}
+
+BGPoint BGSegment::getMiddle() const
+{
+    return BGPoint((m_p1.x() + m_p2.x()) / 2, (m_p1.y() + m_p2.y()) / 2); //Il y a forcément de l'imprécision étant donné que ce sont des nombres entiers
+}
+
+BGPoint BGSegment::getMiddle(const BGSegment& _segment)
+{
+    return _segment.getMiddle();
 }

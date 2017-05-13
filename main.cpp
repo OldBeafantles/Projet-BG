@@ -19,14 +19,19 @@ int main()
 	h.addPoint(BGPoint(300, 50));
 	h.addPoint(BGPoint(100, 100));
 	h.autoFinish();
-	h.delPoint();
+	//h.delPoint();
 	h.movePoint(BGPoint(200, 200), 1);
 	h.movePoint(BGPoint(200, 100), 2);
 	h.movePoint(BGPoint(200, 50));
+	h.movePoint(BGPoint(100, 100), 0);
+	h.moveY(20);
+	h.moveX(30, 0);
+	h.moveY(100, 0);
+	h.addPoint();
+	h.insertPoint(2);
+	h.insertPoint(BGPoint(300, 400), 4);
 
 	sf::RenderWindow window(sf::VideoMode(800, 600), "BGHitbox testing window");
-
-	std::vector < sf::Drawable*> objectsToDraw;
 
 	while (window.isOpen())
 	{

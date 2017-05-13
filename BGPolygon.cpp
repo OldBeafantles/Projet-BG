@@ -10,7 +10,6 @@ BGPolygon::BGPolygon()
     m_finished = false;
 }
 
-
 BGPoint BGPolygon::operator[] (char _index) const
 {
     if (_index >= 0 && _index < m_points.size())
@@ -38,63 +37,53 @@ unsigned char BGPolygon::size() const
     return m_points.size();
 }
 
-
 bool BGPolygon::addPoint(const BGPoint& _point)
 {
-    if (!m_finished)
+    if (m_points.size() < m_nbMaxPoints)
     {
-        if (m_points.size() < m_nbMaxPoints)
+        if (m_points.size() < 3) //Dans le cas où il y a moins de 3 points, le nouveau segment potientiellement créé avec le point ne pourra pas être sécant avec les autres
         {
-            if (m_points.size() < 3) //Dans le cas où il y a moins de 3 points, le nouveau segment potientiellement créé avec le point ne pourra pas être sécant avec les autres
-            {
-                m_points.push_back(_point);
-                std::cout << "Point ajouté !" << std::endl;
-                return true;
-            }
-            else
-            {
-                bool secant = false;
-                unsigned char i = 0;
-                while (i < m_points.size() - 2 && !secant) //Le nouveau segment potentiellement créé ne pourra dans tous les cas pas être sécant avec le segment formé par les deux derniers points, d'où le m_points.size() - 2
-                {
-                    secant = BGSegment::areSecant(BGSegment(_point, m_points[m_points.size() - 1]), BGSegment(m_points[i], m_points[i + 1]));
-                    i++;
-                }
-                if (!secant) //S'il est égal au premier point, alors cela signifie qu'il "fermera" la hitbox
-                {
-                    if (_point.x() == m_points[0].x() && _point.y() == m_points[0].y())
-                    {
-                        m_finished = true;
-                        std::cout << "Hitbox terminée !" << std::endl;
-                        return true;
-                    }
-                    else
-                    {
-                        m_points.push_back(_point);
-                        std::cout << "Point ajouté !" << std::endl;
-                        return true;
-                    }
-                }
-                else
-                {
-                    std::cout << "Impossible d'ajouter le point : Segments sécants !" << std::endl;
-                    return false;
-                }
-            }
+            m_points.push_back(_point);
+            std::cout << "Point ajouté !" << std::endl;
+            return true;
         }
         else
         {
-            std::cout << "Nombre maximal de points atteint !" << std::endl;
-            return false;
+            bool secant = false;
+            unsigned char i = 0;
+            while (i < m_points.size() - 2 && !secant) //Le nouveau segment potentiellement créé ne pourra dans tous les cas pas être sécant avec le segment formé par les deux derniers points, d'où le m_points.size() - 2
+            {
+                secant = BGSegment::areSecant(BGSegment(_point, m_points[m_points.size() - 1]), BGSegment(m_points[i], m_points[i + 1]));
+                i++;
+            }
+            if (!secant) //S'il est égal au premier point, alors cela signifie qu'il "fermera" la hitbox
+            {
+                if (_point.x() == m_points[0].x() && _point.y() == m_points[0].y())
+                {
+                    m_finished = true;
+                    std::cout << "Hitbox terminée !" << std::endl;
+                    return true;
+                }
+                else
+                {
+                    m_points.push_back(_point);
+                    std::cout << "Point ajouté !" << std::endl;
+                    return true;
+                }
+            }
+            else
+            {
+                std::cout << "Impossible d'ajouter le point : Segments sécants !" << std::endl;
+                return false;
+            }
         }
     }
     else
     {
-        std::cout << "Impossible de rajouter un point alors que la hitbox est terminée. Si vous souhaitez le faire, supprimez d'abord le dernier point !" << std::endl;
+        std::cout << "Nombre maximal de points atteint !" << std::endl;
         return false;
     }
 }
-
 
 bool BGPolygon::delPoint(char _index)
 {
@@ -199,7 +188,7 @@ bool BGPolygon::insertPoint(const BGPoint& _point, char _index)
     			//Voir schéma
     			unsigned char i = 0;
     			bool secant = false;
-                BGSegment firstNewLine =BGSegment(_point, m_points[_index]);
+                BGSegment firstNewLine = BGSegment(_point, m_points[_index - 1]);
                 BGSegment secondNewLine;
                 if (_index == 0)
                 {
@@ -207,7 +196,7 @@ bool BGPolygon::insertPoint(const BGPoint& _point, char _index)
                 }
                 else
                 {
-                    secondNewLine = BGSegment(_point, m_points[_index - 1]);
+                    secondNewLine = BGSegment(_point, m_points[_index]);
                 }
 
     			while (i < m_points.size() && !secant)
@@ -314,10 +303,13 @@ bool BGPolygon::movePoint(const BGPoint& _point, char _index)
                         }
                         else
                         {
-                            secant = BGSegment::areSecant(firstNewLine, BGSegment(m_points[0], m_points[m_points.size() - 1]));
-                            if (!secant)
+                            if (_index != 0)
                             {
-                                secant = BGSegment::areSecant(secondNewLine, BGSegment(m_points[0], m_points[m_points.size() - 1]));
+                                secant = BGSegment::areSecant(firstNewLine, BGSegment(m_points[0], m_points[m_points.size() - 1]));
+                                if (!secant)
+                                {
+                                    secant = BGSegment::areSecant(secondNewLine, BGSegment(m_points[0], m_points[m_points.size() - 1]));
+                                }
                             }
                         }
                     }
@@ -325,7 +317,14 @@ bool BGPolygon::movePoint(const BGPoint& _point, char _index)
                     {
                         if (i == getNeighbourVertice(_index, -2))
                         {
-                            secant = BGSegment::areSecant(secondNewLine, BGSegment(m_points[i], m_points[0]));
+                            if (_index == 0)
+                            {
+                                secant = BGSegment::areSecant(secondNewLine, BGSegment(m_points[i], m_points[i + 1]));
+                            }
+                            else
+                            {
+                                secant = BGSegment::areSecant(secondNewLine, BGSegment(m_points[i], m_points[0]));
+                            }
                         }
                         else
                         {
@@ -366,7 +365,6 @@ bool BGPolygon::movePoint(const BGPoint& _point, char _index)
         return false;
     }
 }
-
 
 bool BGPolygon::autoFinish()
 {
