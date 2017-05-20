@@ -1,6 +1,7 @@
 #include "BGPoint.h"
 #include "BGSegment.h"
 #include "BGHitbox.h"
+#include "BGException.h"
 #include <iostream>
 
 
@@ -61,7 +62,7 @@ bool BGPoint::areDifferent(const BGPoint& _p1, const BGPoint& _p2)
     return _p1.isDifferent(_p2);
 }
 
-int BGPoint::getLineEquation(const BGPoint& _P0, const BGPoint& _P1, const BGPoint& _M)
+int BGPoint::getEquationValue(const BGPoint& _P0, const BGPoint& _P1, const BGPoint& _M)
 {
 	return (_M.x() - _P1.x()) * (_P0.y() - _P1.y()) - (_P0.x() - _P1.x()) * (_M.y() - _P1.y());
 }
@@ -70,11 +71,18 @@ bool BGPoint::isInTriangle(const BGTriangle& _triangle, const BGPoint& _point)
 //http://i.imgur.com/0lXdSNO.png
 {
     bool b1, b2, b3;
-    b1 = BGPoint::getLineEquation(_triangle.P1(), _triangle.P2(), _point) < 0;
-    b2 = BGPoint::getLineEquation(_triangle.P2(), _triangle.P3(), _point) < 0;
-    b3 = BGPoint::getLineEquation(_triangle.P3(), _triangle.P1(), _point) < 0;
+    b1 = BGPoint::getEquationValue(_triangle.P1(), _triangle.P2(), _point) < 0;
+    b2 = BGPoint::getEquationValue(_triangle.P2(), _triangle.P3(), _point) < 0;
+    b3 = BGPoint::getEquationValue(_triangle.P3(), _triangle.P1(), _point) < 0;
 
     return (b1 == b2) && (b2 == b3);
+}
+
+bool BGPoint::areAligned(const BGPoint& _p1, const BGPoint& _p2, const BGPoint& _p3)
+{
+    double temp1 = (_p2.y() - _p1.y()) / (_p2.x() - _p1.x());
+    double temp2 = (_p3.y() - _p1.y()) / (_p3.x() - _p1.x());
+    return temp1 == temp2;
 }
 
 unsigned int BGPoint::operator[] (char _index)
@@ -85,6 +93,7 @@ unsigned int BGPoint::operator[] (char _index)
         case 1: return m_y;
         default:
             std::cout << "Erreur : Index non compris entre 0 et 1 inclus !" << std::endl;
+            throw BGException(2, "L'indice est incorrect, il doit être égal à 0 ou 1");
             break;
     }
 }

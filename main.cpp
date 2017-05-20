@@ -12,6 +12,7 @@ int main()
 
 	BGHitbox h;
 
+	/*
 	h.addPoint(BGPoint(100, 200));
 	h.addPoint(BGPoint(200, 300));
 	h.addPoint(BGPoint(300, 300));
@@ -29,7 +30,7 @@ int main()
 	h.moveY(100, 0);
 	h.addPoint();
 	h.insertPoint(2);
-	h.insertPoint(BGPoint(300, 400), 4);
+	h.insertPoint(BGPoint(300, 400), 4);*/
 
 	sf::RenderWindow window(sf::VideoMode(800, 600), "BGHitbox testing window");
 
@@ -40,6 +41,13 @@ int main()
 		{
 			if (event.type == sf::Event::Closed)
 				window.close();
+			else if (event.type == sf::Event::MouseButtonPressed)
+			{
+				if (event.mouseButton.button == sf::Mouse::Left)
+				{
+					h.addPoint(BGPoint(sf::Mouse::getPosition().x - window.getPosition().x - 7, sf::Mouse::getPosition().y - window.getPosition().y - 30));
+				}
+			}
 		}
 		window.clear(sf::Color::Black);
 

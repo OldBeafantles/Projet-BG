@@ -2,6 +2,7 @@
 #define BG_SEGMENT_H
 
 #include "BGPoint.h"
+#include <utility>
 
 class BGSegment
 {
@@ -13,7 +14,7 @@ private:
 public:
 
     BGSegment();
-    BGSegment(BGPoint, BGPoint);
+    BGSegment(const BGPoint&, const BGPoint&);
     BGSegment(unsigned int, unsigned int, unsigned int, unsigned int);
     BGPoint P1() const;
     BGPoint P2() const;
@@ -23,6 +24,7 @@ public:
     double getCoeff() const;
     double getIntercept() const;
     BGPoint getMiddle() const;
+    std::pair < double, int > getLineEquation() const;
 
     static BGSegment copySegment(const BGSegment&);
 
@@ -31,6 +33,7 @@ public:
     static bool isXIn(double, unsigned int, unsigned int);
     static bool isYIn(unsigned int, const BGSegment&);
     static BGPoint getMiddle(const BGSegment&);
+    static std::pair < double, int > getLineEquation(const BGSegment&);
 
     BGPoint operator[] (char) const;
 };

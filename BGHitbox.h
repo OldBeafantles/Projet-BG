@@ -72,6 +72,9 @@ public:
 	const sf::Color& getContentColor() const;
 	void setCurrentPointColor(const sf::Color&);
 	const sf::Color& getCurrentPointColor() const;
+	char getCurrentPoint() const; //Renvoie l'indice du point "courant"
+	void setCurrentPoint(unsigned char);
+	unsigned char size() const;
 
 	//Interactions avec les hitbox
 	void addPoint(const BGPoint&); //Ajoute un nouveau point à la hitbox (si cela est possible)
@@ -89,7 +92,6 @@ public:
 	char getPoint(unsigned int, unsigned int) const; //Renvoie l'index d'un point de la hitbox à partir de coordoonées (renvoie -1 si jamais les coordonnées ne correspondent à aucun point de la hitbox) --> appelle la méthode juste au-dessus
 
 	void draw(char, sf::RenderWindow&); //Le premier paramètre utilise l'énumération WhatToDraw pour afficher les différents éléments sur le sf::RenderWindow envoyé en paramètre
-	char getCurrentPoint() const; //Renvoie l'indice du point "courant"
 
 };
 #endif

@@ -21,10 +21,11 @@ public:
     double getCoeff(const BGPoint&) const;
     bool isDifferent(const BGPoint&) const;
 
+    static bool areAligned(const BGPoint&, const BGPoint&, const BGPoint&);
     static double getCoeff(const BGPoint&, const BGPoint&);
     static bool areVertical(const BGPoint&, const BGPoint&);
     static bool areDifferent(const BGPoint&, const BGPoint&);
-    static int getLineEquation(const BGPoint&, const BGPoint&, const BGPoint&);
+    static int getEquationValue(const BGPoint&, const BGPoint&, const BGPoint&);
     static bool isInTriangle(const BGTriangle&, const BGPoint&);
 
     unsigned int operator[] (char);
