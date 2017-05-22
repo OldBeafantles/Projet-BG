@@ -49,6 +49,7 @@ private:
 	//Méthodes private car utilisées dans celles "publiques"
 	void addNewDrawablePoint(const BGPoint&, char = -1); //Si l'indice vaut -1, la rajoute à la fin du vector
 	void addNewDrawableLine(const BGSegment&, char = -1); //Si l'indice vaut -1, la rajoute à la fin du vector
+	void changeDrawableLine(unsigned char, unsigned char, unsigned char); //Change une ligne (avec son indice de premier paramètre) en utilisant la position de 2 points récupérables à partir de leurs indices dans la hitbox
 	void readaptHitboxContent();
 
 	//Pas besoin d'avoir des pointeurs pour les sf::Drawable pour réaliser une collection hétérogène, on passe directement par la méthode draw()
@@ -87,7 +88,7 @@ public:
 	void moveX(unsigned int, char = -1); //Change la position d'un point seulement par rapport à sa position x et de son indice --> Appelle la méthode movePoint()
 	void moveY(unsigned int, char = -1); //Change la position d'un point seulement par rapport à sa position y et de son indice --> Appelle la méthode movePoint()
 
-
+	const BGPoint& getPoint(char = -1) const; //Renvoie un BGPoint en utilisant l'indice
 	char getPoint(const BGPoint&) const; //Renvoie l'index d'un point de la hitbox s'il correspond au point envoyé en paramètre. Renvoie -1 si aucun point de la hitbox ne correspond
 	char getPoint(unsigned int, unsigned int) const; //Renvoie l'index d'un point de la hitbox à partir de coordoonées (renvoie -1 si jamais les coordonnées ne correspondent à aucun point de la hitbox) --> appelle la méthode juste au-dessus
 

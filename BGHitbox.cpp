@@ -57,6 +57,14 @@ void BGHitbox::readaptHitboxContent()
 	}
 }
 
+void BGHitbox::changeDrawableLine(unsigned char _indexLine, unsigned char _indexPoint1, unsigned char _indexPoint2)
+{
+	m_linesToDraw[_indexLine].setPoint(0, sf::Vector2f((float)m_hitbox.getPoint(_indexPoint2).x(), (float)m_hitbox.getPoint(_indexPoint2).y()));
+	m_linesToDraw[_indexLine].setPoint(1, sf::Vector2f((float)m_hitbox.getPoint(_indexPoint1).x(), (float)m_hitbox.getPoint(_indexPoint1).y()));
+	m_linesToDraw[_indexLine].setPoint(2, sf::Vector2f((float)m_hitbox.getPoint(_indexPoint1).x(), (float)m_hitbox.getPoint(_indexPoint1).y()));
+	m_linesToDraw[_indexLine].setPoint(3, sf::Vector2f((float)m_hitbox.getPoint(_indexPoint2).x(), (float)m_hitbox.getPoint(_indexPoint2).y()));
+}
+
 BGHitbox::BGHitbox(	unsigned char _thicknessLines, sf::Color _linesColor, unsigned char _pointsRadius, sf::Color _pointsColor,
 	 				sf::Color _currentPointColor, sf::Color _contentColor, std::string _fontPath, unsigned char _fontSize,
 					sf::Color _fontColor)
@@ -199,6 +207,7 @@ void BGHitbox::setCurrentPoint(unsigned char _index)
 	if (_index >= 0 && _index < m_hitbox.size())
 	{
 		m_indexCurrentPoint = _index;
+		m_currentPoint.setPosition((float)m_hitbox.getPoint(m_indexCurrentPoint).x() - (m_pointsRadius + BGHitbox::addRadiusCurrentPoint), (float)m_hitbox.getPoint(m_indexCurrentPoint).y() - (m_pointsRadius + BGHitbox::addRadiusCurrentPoint));
 	}
 	else
 	{
@@ -209,6 +218,15 @@ void BGHitbox::setCurrentPoint(unsigned char _index)
 unsigned char BGHitbox::size() const
 {
 	return m_hitbox.size();
+}
+
+const BGPoint& BGHitbox::getPoint(char _index) const
+{
+	if (_index == -1)
+	{
+		_index = m_hitbox.size() - 1;
+	}
+	return m_hitbox[_index];
 }
 
 char BGHitbox::getPoint(const BGPoint& _point) const
@@ -301,10 +319,41 @@ void BGHitbox::delPoint(char _index)
 		}
 		else
 		{
-			m_linesToDraw.erase(m_linesToDraw.begin() + _index - 1);
-			m_linesToDraw.erase(m_linesToDraw.begin() + _index - 1);
-			m_pointsToDraw.erase(m_pointsToDraw.begin() + _index);
-			addNewDrawableLine(BGSegment(m_hitbox.getPoint(_index - 1), m_hitbox.getPoint(_index)));
+			unsigned char index;
+			if (_index == 0 || _index == -1)
+			{
+				if (_index == 0)
+				{
+					index = 0;
+				}
+				else
+				{
+					index = m_pointsToDraw.size() -1;
+				}
+				m_linesToDraw.erase(m_linesToDraw.begin());
+				m_linesToDraw.erase(m_linesToDraw.end() - 1);
+				m_pointsToDraw.erase(m_pointsToDraw.begin() + _index);
+			}
+			else
+			{
+				index = _index;
+				m_linesToDraw.erase(m_linesToDraw.begin() + _index - 1);
+				m_linesToDraw.erase(m_linesToDraw.begin() + _index - 1);
+			}
+
+			m_pointsToDraw.erase(m_pointsToDraw.begin() + index);
+			if (index == m_pointsToDraw.size()) //On a supprimé un point entretemps, d'où la condition
+			{
+				addNewDrawableLine(BGSegment(m_hitbox.getPoint(index - 1), m_hitbox.getPoint(0)));
+			}
+			else if (index == 0)
+			{
+				addNewDrawableLine(BGSegment(m_hitbox.getPoint(m_hitbox.size() - 1), m_hitbox.getPoint(0)));
+			}
+			else
+			{
+				addNewDrawableLine(BGSegment(m_hitbox.getPoint(index - 1), m_hitbox.getPoint(_index)));
+			}
 			readaptHitboxContent();
 			std::cout << "Point supprimé !" << std::endl;
 		}
@@ -385,64 +434,42 @@ void BGHitbox::movePoint(const BGPoint& _point, char _index)
 {
 	if (m_hitbox.movePoint(_point, _index))
 	{
-		if (_index == -1) _index = m_hitbox.size() - 1;
-		if (m_hitbox.size() >= 3)
+		unsigned char indexLine1, indexLine2, indexPoint1, indexPoint2, indexPoint3;
+		if (_index == 0)
 		{
-			if (_index == 0)
-			{
-				m_linesToDraw[0].setPoint(0, sf::Vector2f((float)_point.x(), (float)_point.y()));
-				m_linesToDraw[0].setPoint(1, sf::Vector2f((float)m_hitbox.getPoint(1).x(), (float)m_hitbox.getPoint(1).y()));
-				m_linesToDraw[0].setPoint(2, sf::Vector2f((float)m_hitbox.getPoint(1).x(), (float)m_hitbox.getPoint(1).y()));
-				m_linesToDraw[0].setPoint(3, sf::Vector2f((float)_point.x(), (float)_point.y()));
-				if (m_hitbox.isFinished())
-				{
-					m_linesToDraw[m_linesToDraw.size() - 1].setPoint(0, sf::Vector2f((float)_point.x(), (float)_point.y()));
-					m_linesToDraw[m_linesToDraw.size() - 1].setPoint(1, sf::Vector2f((float)m_hitbox.getPoint(m_hitbox.size() - 1).x(), (float)m_hitbox.getPoint(m_hitbox.size() - 1).y()));
-					m_linesToDraw[m_linesToDraw.size() - 1].setPoint(2, sf::Vector2f((float)m_hitbox.getPoint(m_hitbox.size() - 1).x(), (float)m_hitbox.getPoint(m_hitbox.size() - 1).y()));
-					m_linesToDraw[m_linesToDraw.size() - 1].setPoint(3, sf::Vector2f((float)_point.x(), (float)_point.y()));
-				}
-			}
-			else if (_index == m_hitbox.size() - 1)
-			{
-				m_linesToDraw[m_linesToDraw.size() - 2].setPoint(0, sf::Vector2f((float)_point.x(), (float)_point.y()));
-				m_linesToDraw[m_linesToDraw.size() - 2].setPoint(1, sf::Vector2f((float)m_hitbox.getPoint(m_hitbox.size() - 2).x(), (float)m_hitbox.getPoint(m_hitbox.size() - 2).y()));
-				m_linesToDraw[m_linesToDraw.size() - 2].setPoint(2, sf::Vector2f((float)m_hitbox.getPoint(m_hitbox.size() - 2).x(), (float)m_hitbox.getPoint(m_hitbox.size() - 2).y()));
-				m_linesToDraw[m_linesToDraw.size() - 2].setPoint(3, sf::Vector2f((float)_point.x(), (float)_point.y()));
-				if (m_hitbox.isFinished())
-				{
-					m_linesToDraw[m_linesToDraw.size() - 1].setPoint(0, sf::Vector2f((float)_point.x(), (float)_point.y()));
-					m_linesToDraw[m_linesToDraw.size() - 1].setPoint(1, sf::Vector2f((float)m_hitbox.getPoint(0).x(), (float)m_hitbox.getPoint(0).y()));
-					m_linesToDraw[m_linesToDraw.size() - 1].setPoint(2, sf::Vector2f((float)m_hitbox.getPoint(0).x(), (float)m_hitbox.getPoint(0).y()));
-					m_linesToDraw[m_linesToDraw.size() - 1].setPoint(3, sf::Vector2f((float)_point.x(), (float)_point.y()));
-				}
-			}
-			else
-			{
-				m_linesToDraw[_index - 1].setPoint(0, sf::Vector2f((float)_point.x(), (float)_point.y()));
-				m_linesToDraw[_index - 1].setPoint(1, sf::Vector2f((float)m_hitbox.getPoint(_index - 1).x(), (float)m_hitbox.getPoint(_index - 1).y()));
-				m_linesToDraw[_index - 1].setPoint(2, sf::Vector2f((float)m_hitbox.getPoint(_index - 1).x(), (float)m_hitbox.getPoint(_index - 1).y()));
-				m_linesToDraw[_index - 1].setPoint(3, sf::Vector2f((float)_point.x(), (float)_point.y()));
-
-				m_linesToDraw[_index].setPoint(0, sf::Vector2f((float)_point.x(), (float)_point.y()));
-				m_linesToDraw[_index].setPoint(1, sf::Vector2f((float)m_hitbox.getPoint(_index + 1).x(), (float)m_hitbox.getPoint(_index + 1).y()));
-				m_linesToDraw[_index].setPoint(2, sf::Vector2f((float)m_hitbox.getPoint(_index + 1).x(), (float)m_hitbox.getPoint(_index + 1).y()));
-				m_linesToDraw[_index].setPoint(3, sf::Vector2f((float)_point.x(), (float)_point.y()));
-
-			}
-			m_pointsToDraw[_index].setPosition(sf::Vector2f((float)_point.x() - m_pointsRadius, (float)_point.y() - m_pointsRadius));
-
-			m_indexCurrentPoint = _index;
-			m_currentPoint.setPosition((float)m_hitbox.getPoint(m_indexCurrentPoint).x() - (m_pointsRadius + BGHitbox::addRadiusCurrentPoint), (float)m_hitbox.getPoint(m_indexCurrentPoint).y() - (m_pointsRadius + BGHitbox::addRadiusCurrentPoint));
-
-			readaptHitboxContent();
+			indexLine1 = 0;
+			indexLine2 = m_linesToDraw.size() - 1;
+			indexPoint1 = 0;
+			indexPoint2 = 1;
+			indexPoint3 = m_pointsToDraw.size() - 1;
+		}
+		else if (_index == -1 || _index == m_pointsToDraw.size() - 1)
+		{
+			indexLine1 = m_linesToDraw.size() - 2;
+			indexLine2 = m_linesToDraw.size() - 1;
+			indexPoint1 = m_pointsToDraw.size() - 1;
+			indexPoint2 = m_pointsToDraw.size() - 2;
+			indexPoint3 = 0;
 		}
 		else
 		{
-			unsigned char i = _index == 0;
-			m_linesToDraw[0].setPoint(0, sf::Vector2f((float)_point.x(), (float)_point.y()));
-			m_linesToDraw[0].setPoint(1, sf::Vector2f((float)m_hitbox.getPoint(i).x(), (float)m_hitbox.getPoint(i).y()));
-			m_linesToDraw[0].setPoint(2, sf::Vector2f((float)m_hitbox.getPoint(i).x(), (float)m_hitbox.getPoint(i).y()));
-			m_linesToDraw[0].setPoint(3, sf::Vector2f((float)_point.x(), (float)_point.y()));
+			indexLine1 = _index - 1;
+			indexLine2 = _index;
+			indexPoint1 = _index;
+			indexPoint2 = _index - 1;
+			indexPoint3 = _index + 1;
+		}
+		if (m_hitbox.size() >= 2)
+		{
+			changeDrawableLine(indexLine1, indexPoint1, indexPoint2);
+			if (m_hitbox.size() != 2) //S'il y a plus de 2 points
+			{
+				changeDrawableLine(indexLine2, indexPoint1, indexPoint3);
+			}
+			m_pointsToDraw[indexPoint1].setPosition((float)_point.x() - m_pointsRadius, (float)_point.y() - m_pointsRadius);
+			m_indexCurrentPoint = indexPoint1;
+			m_currentPoint.setPosition((float)m_hitbox.getPoint(m_indexCurrentPoint).x() - (m_pointsRadius + BGHitbox::addRadiusCurrentPoint), (float)m_hitbox.getPoint(m_indexCurrentPoint).y() - (m_pointsRadius + BGHitbox::addRadiusCurrentPoint));
+			readaptHitboxContent();
 		}
 		std::cout << "Position modifiée --> " << _point.x() << " - " << _point.y() << std::endl;
 	}

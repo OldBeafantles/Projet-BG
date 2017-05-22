@@ -12,7 +12,7 @@ BGPolygon::BGPolygon()
     m_finished = false;
 }
 
-BGPoint BGPolygon::operator[] (char _index) const
+const BGPoint& BGPolygon::operator[] (char _index) const
 {
     if (_index >= 0 && _index < m_points.size())
     {

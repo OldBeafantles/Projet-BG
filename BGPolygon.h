@@ -16,8 +16,8 @@ private:
 public:
 
     BGPolygon();
-    BGPoint operator[] (char) const;
-    BGPoint getPoint(unsigned char) const;
+    const BGPoint& operator[] (char) const;
+    const BGPoint& getPoint(unsigned char) const;
     bool isFinished() const;
 
     bool addPoint(const BGPoint&); //Renvoie vrai si l'ajout du point a été réalisé, renvoie faux sinon
